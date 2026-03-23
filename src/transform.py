@@ -11,7 +11,7 @@ SOURCE_SYSTEM = "power_bi"
 def _get_latest_refresh(refresh_history: Optional[list[dict]]) -> Optional[dict]:
     """Return the latest refresh entry based on endTime/startTime.
 
-    We do not assume the API response is always ordered newest-first.
+    We do not assume the API response is always ordered newest-first, so we always pick the latest based on timestamp.
     """
     if not refresh_history:
         return None
@@ -39,28 +39,30 @@ def _derive_status(
       FAILED           — most recent refresh status is "Failed".
     """
 
+    # Note that these are distinct failure modes: no dataset at all vs. dataset exists but isn't refreshable
+    if not dataset_id:
+        return "NOT_REFRESHABLE"
+    if not is_refreshable:
+        return "NOT_REFRESHABLE"
 
-if not dataset_id or not is_refreshable:
-    return "NOT_REFRESHABLE"
+    if refresh_history is None:
+        # None means the API call failed, we don't know the real state
+        return "REFRESH_UNKNOWN"
 
-if refresh_history is None:
-    # None means the API call failed, we don’t know the real state
+    if not refresh_history:
+        return "NEVER_REFRESHED"
+
+    latest = _get_latest_refresh(refresh_history)
+    raw_status = latest.get("status", "").lower()
+
+    if raw_status == "completed":
+        return "SUCCESS"
+
+    if raw_status == "failed":
+        return "FAILED"
+
+    # Unrecognised status (e.g. "unknown", "inProgress"), don't assume absence
     return "REFRESH_UNKNOWN"
-
-if not refresh_history:
-    return "NEVER_REFRESHED"
-
-latest = _get_latest_refresh(refresh_history)
-raw_status = latest.get("status", "").lower()
-
-if raw_status == "completed":
-    return "SUCCESS"
-
-if raw_status == "failed":
-    return "FAILED"
-
-# Unrecognised status (e.g. "unknown", "inProgress"), don't assume absence.
-return "REFRESH_UNKNOWN"
 
 def build_asset_record(
     report: dict,
@@ -90,8 +92,8 @@ def build_asset_record(
     # Requires Dataset.Read.All permission. May be None on shared/external datasets
     owner: Optional[str] = dataset.get("configuredBy") if dataset else None
 
-    # The API returns endTime as an ISO 8601 string.
-    # Fall back to startTime when endTime is absent (e.g. in-progress or aborted refresh)
+    # The API returns endTime as an ISO 8601 string
+    # Fall back to startTime when endTime is absent (e.g. "in-progress" or "aborted refresh")
     last_refresh_at: Optional[str] = None
     latest_refresh = _get_latest_refresh(refresh_history)
     if latest_refresh:
@@ -100,13 +102,17 @@ def build_asset_record(
         )
 
     return {
-        "asset_id": report["id"],
-        "asset_name": report["name"],
-        "workspace_id": workspace["id"],
+        "asset_id": report.get("id", ""),
+        "asset_name": report.get("name", ""),
+        "workspace_id": workspace.get("id", ""),
         "workspace_name": workspace.get("name", ""),
         "dataset_id": dataset_id,
         "owner": owner,
         "last_refresh_at": last_refresh_at,
+        # These require the Admin API (getActivityEvents) — NULL for now
+        "last_updated": dataset.get("createdDate") if dataset else None,
+        "views_last_30d": None,
+        "last_viewed": None,
         "status": _derive_status(dataset_id, is_refreshable, refresh_history),
         "source_system": SOURCE_SYSTEM,
         "ingested_at": ingested_at,
@@ -128,12 +134,12 @@ def transform(
     records: list[dict] = []
 
     for workspace in workspaces:
-        ws_id = workspace["id"]
+        ws_id = workspace.get("id", "")
         reports = reports_by_workspace.get(ws_id, [])
         datasets = datasets_by_workspace.get(ws_id, [])
 
-        # Index datasets by ID for O(1) lookup instead of O(n) scan per report.
-        dataset_map: dict[str, dict] = {d["id"]: d for d in datasets}
+        # Index datasets by ID for O(1) lookup instead of O(n) scan per report
+        dataset_map: dict[str, dict] = {d["id"]: d for d in datasets if d.get("id")}
 
         for report in reports:
             dataset_id = report.get("datasetId")
@@ -143,7 +149,7 @@ def transform(
             # don't accidentally use a dataset_id that belongs to a cross-workspace
             # dataset (which would not be in refresh_by_dataset for this workspace)
             
-            lookup_id = dataset["id"] if dataset is not None else dataset_id
+            lookup_id = dataset.get("id") if dataset is not None else dataset_id
 
             if not lookup_id:
                 history = []

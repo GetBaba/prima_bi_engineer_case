@@ -17,23 +17,16 @@ def _require(key: str) -> str:
     return value
 
 
-# Credentials
-# These come from an Azure AD app registration (service principal) 
-# See README.md for the setup steps
-TENANT_ID: str = _require("AZURE_TENANT_ID")
-CLIENT_ID: str = _require("AZURE_CLIENT_ID")
-CLIENT_SECRET: str = _require("AZURE_CLIENT_SECRET")
+# Credentials are read lazily, they are only validated when auth.py calls _require()
+# This lets demo mode and tests run without an .env file
+def get_credentials() -> tuple[str, str, str]:
+    """Return (tenant_id, client_id, client_secret), validated."""
+    return _require("AZURE_TENANT_ID"), _require("AZURE_CLIENT_ID"), _require("AZURE_CLIENT_SECRET")
 
-# Storage
+
 DB_PATH: str = os.getenv("DB_PATH", "bi_assets.db")
 
-# Paths
-# Resolves relative paths regardless of the working directory at runtime
 ROOT_DIR: Path = Path(__file__).resolve().parent.parent
 
-# Power BI API constants
 POWER_BI_BASE_URL: str = "https://api.powerbi.com/v1.0/myorg"
-TOKEN_URL: str = (
-    f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
-)
 POWER_BI_SCOPE: str = "https://analysis.windows.net/powerbi/api/.default"

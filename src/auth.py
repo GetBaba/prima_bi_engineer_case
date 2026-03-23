@@ -1,6 +1,6 @@
 import requests
 
-from config import CLIENT_ID, CLIENT_SECRET, POWER_BI_SCOPE, TOKEN_URL
+from config import POWER_BI_SCOPE, get_credentials
 from logger import get_logger
 
 logger = get_logger(__name__)
@@ -20,18 +20,29 @@ def get_access_token() -> str:
     Returns:
         Bearer access token (valid ~1 hour)
     """
+    tenant_id, client_id, client_secret = get_credentials()
+    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+
     logger.info("Requesting access token from Azure AD")
     response = requests.post(
-        TOKEN_URL,
+        token_url,
         data={
             "grant_type": "client_credentials",
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
+            "client_id": client_id,
+            "client_secret": client_secret,
             "scope": POWER_BI_SCOPE,
         },
         timeout=15,
     )
     response.raise_for_status()
-    token: str = response.json()["access_token"]
+
+    # .get() + validation instead of direct key access,
+    # in case Azure returns a successful response without a token (potentially due to misconfiguration or permission issues)
+    body = response.json()
+    token = body.get("access_token")
+    if not token:
+        raise ValueError(
+            f"Azure AD response did not contain an access_token: {list(body.keys())}"
+        )
     logger.info("Access token acquired")
     return token

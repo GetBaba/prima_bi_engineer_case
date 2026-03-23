@@ -56,3 +56,6 @@ Giving an overview of SUCCESS, FAILED, NEVER_REFRESHED, NOT_REFRESHABLE, REFRESH
 
 7. Pipeline health (last ingestion time)  
 Ensures the pipeline itself is running. A missing run is a different issue than a failed refresh.
+
+8. Dashboard usage drops  
+Not yet available from the standard REST API, requires the Admin API's activity log (`getActivityEvents`). Once `views_last_30d` and `last_viewed` are populated, flag reports with a significant week-over-week drop in views. Useful for catching reports that have silently become irrelevant or broken in a way that doesn't show up as a refresh failure.

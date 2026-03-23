@@ -12,6 +12,23 @@ cd src && python main.py
 
 Requires an Azure AD app registration (service principal) with `Workspace.Read.All`, `Report.Read.All`, and `Dataset.Read.All` permissions, added as a Viewer to each target workspace.
 
+### Demo mode
+
+You can run the pipeline without Azure credentials using a local fixture:
+
+```bash
+cd src && python main.py --demo
+```
+
+This loads sample data from `tests/fixtures/sample_api_response.json`, runs it through the transform layer, and writes to a real SQLite database. Useful for reviewing the pipeline end-to-end without needing a cloud environment.
+
+### Tests
+
+```bash
+pip install pytest
+pytest tests/ -v
+```
+
 ## Schema
 
 ```sql
@@ -23,19 +40,33 @@ CREATE TABLE IF NOT EXISTS bi_assets (
     dataset_id      TEXT,
     owner           TEXT,               -- dataset configuredBy (UPN); may be NULL
     last_refresh_at TEXT,               -- ISO 8601; endTime with startTime as fallback
+    last_updated    TEXT,               -- dataset timestamp from API (when available)
+    views_last_30d  INTEGER,            -- requires Admin API; NULL until connected
+    last_viewed     TEXT,               -- requires Admin API; NULL until connected
     status          TEXT,               -- SUCCESS | FAILED | NEVER_REFRESHED | NOT_REFRESHABLE | REFRESH_UNKNOWN
     source_system   TEXT,               -- 'power_bi'
     ingested_at     TEXT NOT NULL
 );
 ```
 
+`views_last_30d` and `last_viewed` are not available from the standard Power BI REST API. They require the Admin API's activity log endpoint (`getActivityEvents`). The columns are included in the schema per the brief, ready to populate when the admin endpoint is connected.
+
+## Pipeline Flow
+
+```mermaid
+graph LR
+    A[Azure AD] -->|token| B[Power BI API]
+    B -->|raw JSON| C[Transform]
+    C -->|flat records| D[SQLite]
+```
+
 ## Architecture
 
 - The script is designed to run on a schedule (for example via cron jobs). In a production setup, it could be integrated into an orchestrator like Dagster.
 
-- Credentials are read from environment variables. In production, secrets would be managed in a service like Azure Key Vault rather than stored in code.
+- Credentials are read from environment variables. In production, secrets would be managed in a service like Azure Key Vault, as is common practice for sensitive credentials in production environments.
 
-- API calls include basic retry logic (3 attempts with backoff) for transient errors like 429 or 5xx. Errors on individual datasets (for example 403/404 on refresh history) are logged without stopping the whole pipeline. A global failure exits with code 1 so it can be picked up by a scheduler.
+- API calls include basic retry logic (3 attempts with backoff) for transient errors like 429 or 5xx. Errors on individual datasets (for example 403/404 on refresh history) are logged without stopping the whole pipeline. A global failure exits with code 1 so it can be picked up by a scheduler fast. 
 
 - Data is stored in SQLite using an upsert on `asset_id`. This makes the pipeline idempotent, so running it multiple times produces the same result.
 
@@ -57,8 +88,10 @@ I would monitor the data using simple queries on the `bi_assets` table after eac
 
 - Check `ingested_at`, if no data has been ingested recently, it likely means the pipeline has failed.
 
+- Dashboard usage (view counts, unique viewers) is not available from the standard REST API. It requires the Admin API's activity log endpoint (`getActivityEvents`). The schema includes `views_last_30d` and `last_viewed` columns, ready to populate when that endpoint is connected. Once populated, monitoring for significant drops in usage (e.g. > 40% week-over-week) becomes possible.
+
 ## Design Decisions
 
-I used a service principal (client credentials flow) rather than username/password because the pipeline shouldn’t break when someone changes their password or leaves the team, and MFA makes ROPC flows painful to automate. The one-time Azure AD setup is worth it.
+I used a service principal (client credentials flow) rather than username/password because the pipeline shouldn’t break when someone changes their password or leaves the team, and this is how I have always worked in the past, as it is also easier for large scale production and easier for automations.
 
-I picked SQLite because the upsert logic is standard SQL, which I know best, and identical in Postgres or Redshift. Switching the storage layer later is a one-line connection string change.
+I picked SQLite because the upsert logic is standard SQL. The `INSERT ... ON CONFLICT` syntax works the same in Postgres. Redshift would need a `MERGE` or staging-table pattern instead. Moving to a different database would also mean swapping the `sqlite3` module for something like `psycopg2`, so it would not be just a one-line change, but the SQL logic and pipeline structure stay the same.

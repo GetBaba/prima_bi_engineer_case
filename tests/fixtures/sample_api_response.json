@@ -1,0 +1,89 @@
+{
+  "workspaces": [
+    {
+      "id": "ws-001",
+      "name": "Finance"
+    },
+    {
+      "id": "ws-002",
+      "name": "Marketing"
+    }
+  ],
+  "reports_by_workspace": {
+    "ws-001": [
+      {
+        "id": "rpt-001",
+        "name": "Revenue Dashboard",
+        "datasetId": "ds-001"
+      },
+      {
+        "id": "rpt-002",
+        "name": "Cost Breakdown",
+        "datasetId": "ds-002"
+      }
+    ],
+    "ws-002": [
+      {
+        "id": "rpt-003",
+        "name": "Campaign Performance",
+        "datasetId": "ds-003"
+      },
+      {
+        "id": "rpt-004",
+        "name": "Live Metrics Board",
+        "datasetId": "ds-004"
+      }
+    ]
+  },
+  "datasets_by_workspace": {
+    "ws-001": [
+      {
+        "id": "ds-001",
+        "name": "Revenue Model",
+        "isRefreshable": true,
+        "configuredBy": "alice@company.com",
+        "createdDate": "2025-11-01T08:00:00Z"
+      },
+      {
+        "id": "ds-002",
+        "name": "Cost Model",
+        "isRefreshable": true,
+        "configuredBy": "bob@company.com",
+        "createdDate": "2025-10-15T10:30:00Z"
+      }
+    ],
+    "ws-002": [
+      {
+        "id": "ds-003",
+        "name": "Campaign Data",
+        "isRefreshable": true,
+        "configuredBy": null,
+        "createdDate": "2025-12-01T09:00:00Z"
+      },
+      {
+        "id": "ds-004",
+        "name": "Streaming Dataset",
+        "isRefreshable": false,
+        "configuredBy": "carol@company.com",
+        "createdDate": "2026-01-10T14:00:00Z"
+      }
+    ]
+  },
+  "refresh_by_dataset": {
+    "ds-001": [
+      {
+        "status": "Completed",
+        "startTime": "2026-03-22T02:00:00Z",
+        "endTime": "2026-03-22T02:05:30Z"
+      }
+    ],
+    "ds-002": [
+      {
+        "status": "Failed",
+        "startTime": "2026-03-22T02:00:00Z",
+        "endTime": "2026-03-22T02:01:12Z"
+      }
+    ],
+    "ds-003": []
+  }
+}

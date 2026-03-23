@@ -52,7 +52,8 @@ class PowerBIClient:
             response = self._session.get(url, timeout=15)
             response.raise_for_status()
             body = response.json()
-            items.extend(body.get("value", []))
+            # see the `or []` instead of default, this catches the edge case where the API returns "value": null
+            items.extend(body.get("value") or [])
             url = body.get("@odata.nextLink")
 
         return items
