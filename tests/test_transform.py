@@ -12,7 +12,7 @@ from transform import _derive_status, _get_latest_refresh, build_asset_record, t
 
 class TestDeriveStatus:
     def test_no_dataset_id(self):
-        assert _derive_status(None, True, []) == "NOT_REFRESHABLE"
+        assert _derive_status(None, True, []) == "NO_DATASET"
 
     def test_not_refreshable(self):
         assert _derive_status("ds-001", False, []) == "NOT_REFRESHABLE"
@@ -82,7 +82,7 @@ class TestBuildAssetRecord:
 
         record = build_asset_record(report, workspace, None, [], "2026-03-22T03:00:00Z")
 
-        assert record["status"] == "NOT_REFRESHABLE"
+        assert record["status"] == "NO_DATASET"
         assert record["owner"] is None
 
 
@@ -94,6 +94,7 @@ class TestTransform:
         reports = {"ws-1": [
             {"id": "r1", "name": "Report A", "datasetId": "ds-1"},
             {"id": "r2", "name": "Report B", "datasetId": "ds-2"},
+            {"id": "r3", "name": "Report C"},
         ]}
         datasets = {"ws-1": [
             {"id": "ds-1", "isRefreshable": True, "configuredBy": "a@b.com", "createdDate": "2025-01-01T00:00:00Z"},
@@ -103,6 +104,7 @@ class TestTransform:
 
         records = transform(workspaces, reports, datasets, refresh, "2026-03-22T00:00:00Z")
 
-        assert len(records) == 2
+        assert len(records) == 3
         assert records[0]["status"] == "SUCCESS"
         assert records[1]["status"] == "NOT_REFRESHABLE"
+        assert records[2]["status"] == "NO_DATASET"

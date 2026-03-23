@@ -29,7 +29,9 @@ def _derive_status(
     """Derive a normalised status value from dataset and refresh metadata.
 
     Status values:
-      NOT_REFRESHABLE  — no linked dataset, or isRefreshable=False (live
+      NO_DATASET       — report has no linked dataset (e.g. paginated report,
+                         deleted dataset, or missing datasetId in the API response).
+      NOT_REFRESHABLE  — dataset exists but isRefreshable=False (live connection,
                          DirectQuery, push datasets, Excel workbooks, etc.).
       REFRESH_UNKNOWN  — dataset is refreshable but history could not be
                          retrieved (permissions gap or unexpected API status).
@@ -39,9 +41,8 @@ def _derive_status(
       FAILED           — most recent refresh status is "Failed".
     """
 
-    # Note that these are distinct failure modes: no dataset at all vs. dataset exists but isn't refreshable
     if not dataset_id:
-        return "NOT_REFRESHABLE"
+        return "NO_DATASET"
     if not is_refreshable:
         return "NOT_REFRESHABLE"
 

@@ -1,4 +1,4 @@
-"""Tests for the storage module, uses an in-memory SQLite database"""
+"""Tests for the storage module — uses a temporary on-disk SQLite database via pytest tmp_path."""
 
 import sqlite3
 import sys

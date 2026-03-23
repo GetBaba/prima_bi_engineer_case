@@ -32,6 +32,10 @@
         "id": "rpt-004",
         "name": "Live Metrics Board",
         "datasetId": "ds-004"
+      },
+      {
+        "id": "rpt-005",
+        "name": "Ad-hoc Notes"
       }
     ]
   },

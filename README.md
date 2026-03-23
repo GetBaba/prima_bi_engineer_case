@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS bi_assets (
     last_updated    TEXT,               -- dataset timestamp from API (when available)
     views_last_30d  INTEGER,            -- requires Admin API; NULL until connected
     last_viewed     TEXT,               -- requires Admin API; NULL until connected
-    status          TEXT,               -- SUCCESS | FAILED | NEVER_REFRESHED | NOT_REFRESHABLE | REFRESH_UNKNOWN
+    status          TEXT,               -- SUCCESS | FAILED | NEVER_REFRESHED | NOT_REFRESHABLE | NO_DATASET | REFRESH_UNKNOWN
     source_system   TEXT,               -- 'power_bi'
     ingested_at     TEXT NOT NULL
 );

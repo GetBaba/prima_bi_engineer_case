@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS bi_assets (
     last_updated    TEXT,               -- dataset addRowsAPIEnabled/createdDate from API (when available)
     views_last_30d  INTEGER,            -- requires Admin API (getActivityEvents); NULL until connected correctlty
     last_viewed     TEXT,               -- requires Admin API; NULL until connected
-    status          TEXT,               -- SUCCESS | FAILED | NEVER_REFRESHED | NOT_REFRESHABLE | REFRESH_UNKNOWN
+    status          TEXT,               -- SUCCESS | FAILED | NEVER_REFRESHED | NOT_REFRESHABLE | NO_DATASET | REFRESH_UNKNOWN
     source_system   TEXT,               -- always 'power_bi' for this pipeline
     ingested_at     TEXT NOT NULL       -- ISO 8601 timestamp of the pipeline run
 );
